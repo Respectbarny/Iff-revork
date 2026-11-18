@@ -204,7 +204,7 @@ async function login() {
     return;
   }
 
-  if (SUPABASE_PUBLIC_KEY === "ВСТАВЬ_СЮДА_PUBLISHABLE_KEY") {
+  if (SUPABASE_PUBLIC_KEY === "sb_publishable_anhmXjORmkLEW1MXBVZzXw_NcTXuwfZ") {
     error.textContent = "Сначала необходимо настроить подключение сайта.";
     return;
   }
