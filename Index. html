@@ -1,0 +1,326 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IFF Rework</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: #101522;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 650px;
+  background: #1b2435;
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 10px 35px #0005;
+}
+
+h1 {
+  text-align: center;
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #aebbd0;
+  margin-bottom: 30px;
+}
+
+button, select, input {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border-radius: 9px;
+  border: none;
+  font-size: 16px;
+}
+
+select, input {
+  background: #303c51;
+  color: white;
+  border: 1px solid #53627b;
+}
+
+button {
+  background: #3978ed;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2863d0;
+}
+
+.secondary {
+  background: #39465c;
+}
+
+.hidden {
+  display: none;
+}
+
+.error {
+  color: #ff7777;
+  text-align: center;
+  margin-top: 15px;
+}
+
+.stat {
+  background: #29364b;
+  padding: 13px;
+  margin-top: 9px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.stat-name {
+  color: #aebbd0;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.section-title {
+  margin-top: 25px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #53627b;
+  color: #80aaff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <section id="start">
+    <h1>IFF Rework</h1>
+    <p class="subtitle">Узнайте свою статистику прямо сейчас!</p>
+    <button onclick="showLogin()">Начать</button>
+  </section>
+
+  <section id="login" class="hidden">
+    <h1>Вход в государство</h1>
+    <p class="subtitle">Выберите государство и введите свой ключ.</p>
+
+    <select id="country">
+      <option value="">Выберите государство</option>
+      <option value="Пятигорье">Пятигорье</option>
+      <option value="Редия">Редия</option>
+      <option value="Колбасоляндия 2х">Колбасодяндия 2х</option>
+      <option value="СПМР">СПМР</option>
+      <option value="PMC Reduct">RMC Reduct</option>
+      <option value="Лос Илюминадос">Лос Илюминадос</option>
+      <option value="Королевство Тайлеровское">Королевство Тайлеровское</option>
+      <option value="Бургерланд">Бургенланд</option>
+    </select>
+
+    <input
+      id="key"
+      type="password"
+      placeholder="Введите ключ государства"
+      autocomplete="off"
+    >
+
+    <button onclick="login()">Посмотреть статистику</button>
+    <button class="secondary" onclick="showStart()">Назад</button>
+
+    <p id="error" class="error"></p>
+  </section>
+
+  <section id="statistics" class="hidden">
+    <h1 id="countryTitle">Статистика</h1>
+    <div id="stats"></div>
+    <button onclick="showStart()">Вернуться на стартовую страницу</button>
+  </section>
+
+</div>
+
+<script>
+const FUNCTION_URL =
+  "https://glxirqmkvrxwkanffdbp.supabase.co/functions/v1/swift-function";
+
+// Вставь сюда свой публичный ключ Supabase.
+// Он начинается с sb_publishable_.
+// Никогда не вставляй сюда service_role или секретный ключ.
+const SUPABASE_PUBLIC_KEY = "ВСТАВЬ_СЮДА_PUBLISHABLE_KEY";
+
+function showStart() {
+  document.getElementById("start").classList.remove("hidden");
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("statistics").classList.add("hidden");
+  document.getElementById("key").value = "";
+  document.getElementById("error").textContent = "";
+}
+
+function showLogin() {
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+}
+
+function showStatistics() {
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("statistics").classList.remove("hidden");
+}
+
+async function login() {
+  const countryName = document.getElementById("country").value;
+  const key = document.getElementById("key").value;
+  const error = document.getElementById("error");
+  const button = document.querySelector("#login button");
+
+  error.textContent = "";
+
+  if (!countryName) {
+    error.textContent = "Выберите государство.";
+    return;
+  }
+
+  if (!key) {
+    error.textContent = "Введите ключ государства.";
+    return;
+  }
+
+  if (SUPABASE_PUBLIC_KEY === "ВСТАВЬ_СЮДА_PUBLISHABLE_KEY") {
+    error.textContent = "Сначала необходимо настроить подключение сайта.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Загрузка...";
+
+  try {
+    const response = await fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_PUBLIC_KEY
+      },
+      body: JSON.stringify({
+        countryName: countryName,
+        key: key
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      error.textContent = result.error || "Не удалось получить статистику.";
+      return;
+    }
+
+    document.getElementById("countryTitle").textContent =
+      result.country;
+
+    renderStatistics(result.statistics);
+
+    document.getElementById("key").value = "";
+    showStatistics();
+
+  } catch (e) {
+    error.textContent = "Не удалось подключиться к серверу. Попробуйте позже.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Посмотреть статистику";
+  }
+}
+
+const labels = {
+  capital: "Столица",
+  ruler: "Президент / правитель",
+  cities: "Количество городов",
+  population: "Количество населения",
+  army: "Армия",
+  reserve: "Резерв",
+  budget: "Баланс казны (ИФ)",
+  dailyIncome: "Доход за игровой день (ИФ)",
+  expenses: "Постоянные траты (ИФ)",
+  net: "Чистый заработок (ИФ)",
+  taxIncome: "Доход от налогов (ИФ)",
+  tradeIncome: "Доход от торговли (ИФ)",
+  factories: "Заводы",
+  agriculture: "Сельское хозяйство — уровень",
+  electricity: "Электроснабжение — уровень",
+  heating: "Отопление — уровень",
+  border: "Укрепление границ — уровень",
+  schools: "Школы",
+  hospitals: "Больницы",
+  shops: "Магазины и другие предприятия",
+  fortifications: "Укрепления",
+  shelters: "Укрытия",
+  satisfaction: "Удовлетворённость населения",
+  food: "Обеспеченность продовольствием",
+  electricityAccess: "Доступ к электричеству",
+  heatingAccess: "Доступ к отоплению",
+  bases: "Военные базы",
+  groundExpense: "Расходы на наземные войска в день (ИФ)",
+  aviationExpense: "Расходы на авиацию в день (ИФ)",
+  navyExpense: "Расходы на флот в день (ИФ)"
+};
+
+function renderStatistics(data) {
+  const container = document.getElementById("stats");
+  container.replaceChildren();
+
+  function addItems(object) {
+    if (!object || typeof object !== "object") return;
+
+    for (const [key, value] of Object.entries(object)) {
+      if (value === null || value === undefined) continue;
+
+      if (typeof value === "object") {
+        const heading = document.createElement("h3");
+        heading.className = "section-title";
+        heading.textContent = labels[key] || key;
+        container.appendChild(heading);
+
+        addItems(value);
+        continue;
+      }
+
+      const item = document.createElement("div");
+      item.className = "stat";
+
+      const name = document.createElement("div");
+      name.className = "stat-name";
+      name.textContent = labels[key] || key;
+
+      const val = document.createElement("div");
+      val.className = "stat-value";
+      val.textContent = String(value);
+
+      item.appendChild(name);
+      item.appendChild(val);
+      container.appendChild(item);
+    }
+  }
+
+  addItems(data);
+}
+</script>
+
+</body>
+</html>
