@@ -25,7 +25,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 650px;
+  max-width: 750px;
   background: #1b2435;
   padding: 30px;
   border-radius: 18px;
@@ -70,6 +70,11 @@ button:hover {
   background: #2863d0;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .secondary {
   background: #39465c;
 }
@@ -84,18 +89,33 @@ button:hover {
   margin-top: 15px;
 }
 
+.section-title {
+  margin-top: 28px;
+  margin-bottom: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #53627b;
+  color: #80aaff;
+  font-size: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .stat {
   background: #29364b;
-  padding: 13px;
-  margin-top: 9px;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 9px;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .stat-name {
   color: #aebbd0;
-  font-size: 14px;
-  margin-bottom: 5px;
+  font-size: 13px;
+  margin-bottom: 7px;
 }
 
 .stat-value {
@@ -103,11 +123,26 @@ button:hover {
   font-weight: bold;
 }
 
-.section-title {
+.footer {
+  color: #8493aa;
+  text-align: center;
+  font-size: 12px;
   margin-top: 25px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #53627b;
-  color: #80aaff;
+  line-height: 1.7;
+}
+
+@media (max-width: 450px) {
+  .container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 29px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 </head>
@@ -163,9 +198,7 @@ button:hover {
 const FUNCTION_URL =
   "https://glxirqmkvrxwkanffdbp.supabase.co/functions/v1/swift-function";
 
-// Вставь сюда свой публичный ключ Supabase.
-// Он начинается с sb_publishable_.
-// Никогда не вставляй сюда service_role или секретный ключ.
+// ВСТАВЬ СЮДА СВОЙ ПРЕЖНИЙ ПУБЛИЧНЫЙ КЛЮЧ
 const SUPABASE_PUBLIC_KEY = "sb_publishable_anhmXjORmkLEW1MXBVZzXw_NcTXuwfZ";
 
 function showStart() {
@@ -204,7 +237,10 @@ async function login() {
     return;
   }
 
-  if (SUPABASE_PUBLIC_KEY === "ВСТАВЬ_СЮДА_PUBLISHABLE_KEY") {
+  if (
+    SUPABASE_PUBLIC_KEY === "ВСТАВЬ_СЮДА_PUBLISHABLE_KEY" ||
+    !SUPABASE_PUBLIC_KEY.startsWith("sb_publishable_")
+  ) {
     error.textContent = "Сначала необходимо настроить подключение сайта.";
     return;
   }
@@ -228,12 +264,13 @@ async function login() {
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-      error.textContent = result.error || "Не удалось получить статистику.";
+      error.textContent =
+        result.error || "Не удалось получить статистику.";
       return;
     }
 
     document.getElementById("countryTitle").textContent =
-      result.country;
+      "Статистика: " + result.country;
 
     renderStatistics(result.statistics);
 
@@ -241,13 +278,15 @@ async function login() {
     showStatistics();
 
   } catch (e) {
-    error.textContent = "Не удалось подключиться к серверу. Попробуйте позже.";
+    error.textContent =
+      "Не удалось подключиться к серверу. Попробуйте позже.";
   } finally {
     button.disabled = false;
     button.textContent = "Посмотреть статистику";
   }
 }
 
+// Названия показателей
 const labels = {
   capital: "Столица",
   ruler: "Президент / правитель",
@@ -255,12 +294,14 @@ const labels = {
   population: "Количество населения",
   army: "Армия",
   reserve: "Резерв",
+
   budget: "Баланс казны (ИФ)",
   dailyIncome: "Доход за игровой день (ИФ)",
   expenses: "Постоянные траты (ИФ)",
   net: "Чистый заработок (ИФ)",
   taxIncome: "Доход от налогов (ИФ)",
   tradeIncome: "Доход от торговли (ИФ)",
+
   factories: "Заводы",
   agriculture: "Сельское хозяйство — уровень",
   electricity: "Электроснабжение — уровень",
@@ -271,54 +312,193 @@ const labels = {
   shops: "Магазины и другие предприятия",
   fortifications: "Укрепления",
   shelters: "Укрытия",
+
   satisfaction: "Удовлетворённость населения",
   food: "Обеспеченность продовольствием",
   electricityAccess: "Доступ к электричеству",
   heatingAccess: "Доступ к отоплению",
+
   bases: "Военные базы",
   groundExpense: "Расходы на наземные войска в день (ИФ)",
   aviationExpense: "Расходы на авиацию в день (ИФ)",
   navyExpense: "Расходы на флот в день (ИФ)"
 };
 
+// Порядок отображения показателей
+const groups = [
+  {
+    title: "🏳️ Основная информация",
+    keys: [
+      "capital", "ruler", "cities", "population",
+      "army", "reserve"
+    ]
+  },
+  {
+    title: "💰 Экономика",
+    keys: [
+      "budget", "dailyIncome", "expenses", "net",
+      "taxIncome", "tradeIncome"
+    ]
+  },
+  {
+    title: "🏙️ Инфраструктура",
+    keys: [
+      "factories", "agriculture", "electricity",
+      "heating", "border", "schools", "hospitals",
+      "shops", "fortifications", "shelters"
+    ]
+  },
+  {
+    title: "🌱 Благополучие населения",
+    keys: [
+      "satisfaction", "food",
+      "electricityAccess", "heatingAccess"
+    ]
+  },
+  {
+    title: "🪖 Военная инфраструктура и расходы",
+    keys: [
+      "bases", "groundExpense",
+      "aviationExpense", "navyExpense"
+    ]
+  }
+];
+
+function addCard(container, name, value) {
+  const item = document.createElement("div");
+  item.className = "stat";
+
+  const title = document.createElement("div");
+  title.className = "stat-name";
+  title.textContent = name;
+
+  const val = document.createElement("div");
+  val.className = "stat-value";
+  val.textContent = String(value);
+
+  item.appendChild(title);
+  item.appendChild(val);
+  container.appendChild(item);
+}
+
+function addSection(container, title, entries) {
+  if (!entries.length) return;
+
+  const heading = document.createElement("h3");
+  heading.className = "section-title";
+  heading.textContent = title;
+  container.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "stats-grid";
+
+  entries.forEach(([name, value]) => {
+    addCard(grid, name, value);
+  });
+
+  container.appendChild(grid);
+}
+
 function renderStatistics(data) {
   const container = document.getElementById("stats");
   container.replaceChildren();
 
-  function addItems(object) {
-    if (!object || typeof object !== "object") return;
-
-    for (const [key, value] of Object.entries(object)) {
-      if (value === null || value === undefined) continue;
-
-      if (typeof value === "object") {
-        const heading = document.createElement("h3");
-        heading.className = "section-title";
-        heading.textContent = labels[key] || key;
-        container.appendChild(heading);
-
-        addItems(value);
-        continue;
-      }
-
-      const item = document.createElement("div");
-      item.className = "stat";
-
-      const name = document.createElement("div");
-      name.className = "stat-name";
-      name.textContent = labels[key] || key;
-
-      const val = document.createElement("div");
-      val.className = "stat-value";
-      val.textContent = String(value);
-
-      item.appendChild(name);
-      item.appendChild(val);
-      container.appendChild(item);
-    }
+  if (!data || typeof data !== "object") {
+    container.textContent = "Статистика пока недоступна.";
+    return;
   }
 
-  addItems(data);
+  const displayed = new Set();
+
+  // Основные показатели из Supabase
+  groups.forEach(group => {
+    const entries = [];
+
+    group.keys.forEach(key => {
+      if (
+        Object.prototype.hasOwnProperty.call(data, key) &&
+        data[key] !== null &&
+        data[key] !== undefined
+      ) {
+        entries.push([labels[key], data[key]]);
+        displayed.add(key);
+      }
+    });
+
+    addSection(container, group.title, entries);
+  });
+
+  // Дополнительные показатели торговли
+  addSection(container, "📦 Торговля и вооружение", [
+    ["Импорт за игровой день", "0 ИФ"],
+    ["Экспорт за игровой день", "0 ИФ"],
+    ["Баллистические ракеты", "0"],
+    ["Ядерные бомбы", "0"]
+  ]);
+
+  // Наземные войска
+  addSection(container, "🪖 Наземные войска", [
+    [
+      "Пехота — уровень 1",
+      data.country === "PMC Reduct" ? "Да" : "Нет"
+    ],
+    ["Пехота — уровень 2", "Нет"],
+    ["Пехота — уровень 3", "Нет"],
+    ["Танки — уровни 1–3", "Нет"],
+    ["Противотанковые подразделения — уровни 1–3", "Нет"]
+  ]);
+
+  // Авиация
+  addSection(container, "✈️ Авиация", [
+    ["Транспортные самолёты", "0"],
+    ["Грузовые самолёты", "0"],
+    ["Боевые самолёты — уровень 1", "Нет"],
+    ["Истребители — уровень 2", "Нет"],
+    ["Бомбардировщики — уровень 3", "Нет"],
+    ["Аэропорты", "0"]
+  ]);
+
+  // Флот
+  const hasShips =
+    document.getElementById("country").value === "СПМР" ||
+    document.getElementById("country").value === "PMC Reduct";
+
+  addSection(container, "🚢 Флот", [
+    ["Транспортные корабли", hasShips ? "1" : "0"],
+    ["Грузовые корабли", "0"],
+    ["Патрульные лодки — уровень 1", "Нет"],
+    ["Эсминцы — уровень 2", "Нет"],
+    ["Авианосцы — уровень 3", "Нет"],
+    ["Порты", hasShips ? "1" : "0"]
+  ]);
+
+  // Неизвестные дополнительные поля не теряем
+  const remaining = Object.entries(data).filter(([key, value]) => {
+    return (
+      !displayed.has(key) &&
+      value !== null &&
+      value !== undefined &&
+      typeof value !== "object"
+    );
+  });
+
+  if (remaining.length) {
+    addSection(
+      container,
+      "📊 Дополнительные показатели",
+      remaining.map(([key, value]) => [
+        labels[key] || key.replace(/([A-Z])/g, " $1"),
+        value
+      ])
+    );
+  }
+
+  const footer = document.createElement("div");
+  footer.className = "footer";
+  footer.textContent =
+    "Следующий расчёт экономики: каждые 24 часа. | IFF Rework";
+
+  container.appendChild(footer);
 }
 </script>
 
